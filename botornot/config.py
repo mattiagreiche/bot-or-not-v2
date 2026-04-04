@@ -33,8 +33,8 @@ TRAINING_BOT_FILES = [
 
 # inference data file list
 INFERENCE_POST_FILES = [
-    #  os.path.join(DIR_RAW, "dataset.posts&users.34.json"), # english
-    # os.path.join(DIR_RAW, "dataset.posts&users.35.json"), # french
+    os.path.join(DIR_INFERENCE, "dataset.posts&users.7.json"), # english
+    os.path.join(DIR_INFERENCE, "dataset.posts&users.8.json"), # french
 ]
 
 # derived paths: training outputs
@@ -45,14 +45,14 @@ else:
     TRAINING_PARQUET_PATH = os.path.join(DIR_TRAINING, "user_features_no_emb.parquet")
     TRAINING_PREVIEW_PATH = os.path.join(DIR_TRAINING, "user_features_no_emb_preview.csv")
 
-# derived paths: inference outputs
-if USE_EMBEDDINGS:
-    INFERENCE_PARQUET_PATH = os.path.join(DIR_INFERENCE, "user_features_35.parquet") # french right now
-    INFERENCE_PREVIEW_PATH = os.path.join(DIR_INFERENCE, "user_features_35_preview.csv")
-else:
-    INFERENCE_PARQUET_PATH = os.path.join(DIR_INFERENCE, "user_features__35_no_emb.parquet")
-    INFERENCE_PREVIEW_PATH = os.path.join(DIR_INFERENCE, "user_features_35_no_emb_preview.csv")
+def inference_paths(json_file):
+    """Return (parquet_path, predictions_path, preview_path) for a given inference JSON file."""
+    num = os.path.basename(json_file).split('.')[-2]
+    suffix = "" if USE_EMBEDDINGS else "_no_emb"
+    parquet  = os.path.join(DIR_INFERENCE, f"user_features_{num}{suffix}.parquet")
+    preds    = os.path.join(DIR_INFERENCE, f"predicted_bot_ids_{num}.txt")
+    preview  = os.path.join(DIR_INFERENCE, f"user_features_{num}{suffix}_preview.csv")
+    return parquet, preds, preview
 
-# model artifact and prediction output
+# model artifact
 ARTIFACT_PATH = os.path.join(DIR_MODELS, "bot_detector.pkl")
-PREDICTED_BOT_IDS_PATH = "predicted_bot_ids.txt"
