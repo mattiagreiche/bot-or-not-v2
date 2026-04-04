@@ -18,6 +18,7 @@ URL_RE = re.compile(r"https?://\S+")
 HASHTAG_RE = re.compile(r'#\w+')
 MENTION_RE = re.compile(r"@\w+")
 NONALPHA_RE = re.compile(r'[^A-Za-z0-9_]')
+WORD_RE = re.compile(r'[A-Za-z\u00C0-\u017E]+')  # includes French accented chars
 
 def count_caps(s):
     return sum(1 for c in s if 'A' <= c <= 'Z')
@@ -46,6 +47,28 @@ def char_entropy(s):
         ent -= p * math.log2(p)
     return ent
 
+def series_entropy(series):
+    """Shannon entropy of a discrete series (e.g. hour-of-day 0-23)."""
+    vals = series.dropna()
+    if len(vals) == 0:
+        return 0.0
+    cnt = Counter(vals.astype(int).tolist())
+    total = len(vals)
+    return -sum((c / total) * math.log2(c / total) for c in cnt.values())
+
+def _ttr(text):
+    words = WORD_RE.findall(text.lower())
+    return len(set(words)) / len(words) if words else 0.0
+
+def _avg_word_len(text):
+    words = WORD_RE.findall(text.lower())
+    return sum(len(w) for w in words) / len(words) if words else 0.0
+
+def _uhr(text):
+    """Unique hashtag ratio: unique hashtags / total hashtags. 1.0 if no hashtags (not spammy)."""
+    hashtags = HASHTAG_RE.findall(text.lower())
+    return len(set(hashtags)) / len(hashtags) if hashtags else 1.0
+
 
 # core feature extraction
 
@@ -56,9 +79,13 @@ def extract_features_from_posts(posts_list, use_embeddings=True):
     # pre-processing
     posts["created_at"] = pd.to_datetime(posts["created_at"], errors="coerce")
     posts["text"] = posts["text"].fillna("")
-    
+
     # sort by user then time for time-diff calculations
     posts = posts.sort_values(["author_id", "created_at"]).reset_index(drop=True)
+
+    # extract temporal components for rhythm features
+    posts["hour"] = posts["created_at"].dt.hour
+    posts["dow"] = posts["created_at"].dt.dayofweek
     
     # per-post features
     posts["len"] = posts["text"].str.len()
@@ -104,7 +131,28 @@ def extract_features_from_posts(posts_list, use_embeddings=True):
     
     posts_agg = posts_agg.drop(columns=["created_at_min", "created_at_max"])
     posts_agg = posts_agg.fillna(0) # fill NaNs from std dev calculations on single posts
-    
+
+    # temporal rhythm features
+    temporal_agg = posts.groupby("author_id").agg(
+        hour_entropy=("hour", series_entropy),
+        dow_entropy=("dow", series_entropy),
+    ).reset_index()
+    posts_agg = pd.merge(posts_agg, temporal_agg, on="author_id", how="left")
+    posts_agg["delta_s_cv"] = posts_agg["delta_s_std"] / (posts_agg["delta_s_mean"].abs() + 1e-9)
+
+    # vocabulary richness features (language-agnostic, works for English and French)
+    user_texts = posts.groupby("author_id")["text"].apply(lambda x: " ".join(x.fillna("")))
+    vocab_agg = pd.DataFrame({
+        "author_id": user_texts.index,
+        "type_token_ratio": user_texts.map(_ttr),
+        "avg_word_length": user_texts.map(_avg_word_len),
+        "unique_hashtag_ratio": user_texts.map(_uhr),
+    }).reset_index(drop=True)
+    posts_agg = pd.merge(posts_agg, vocab_agg, on="author_id", how="left")
+
+    new_cols = ["hour_entropy", "dow_entropy", "delta_s_cv", "type_token_ratio", "avg_word_length", "unique_hashtag_ratio"]
+    posts_agg[new_cols] = posts_agg[new_cols].fillna(0)
+
     if not use_embeddings:
         return posts_agg
     
@@ -223,6 +271,19 @@ def build_features_df(post_files, bot_files=None, use_embeddings=True):
         lookup_df = pd.read_csv(TWITTER_LOOKUP_PATH)
         lookup_df = lookup_df.replace(-1, float("nan"))
         final_df = pd.merge(final_df, lookup_df, on="username", how="left")
+
+        # composite identity features derived from the lookup columns
+        ae = final_df["account_exists"]
+        nm = final_df["name_match"]
+        dm = final_df["description_match"]
+        lm = final_df["location_match"]
+        # sum of all binary matches; NaN for users not looked up yet
+        match_sum = ae.fillna(0) + nm.fillna(0) + dm.fillna(0) + lm.fillna(0)
+        final_df["identity_score"] = match_sum.where(ae.notna(), other=float("nan"))
+        # account exists AND name matches → almost certainly a real person
+        final_df["confirmed_real"] = ((ae == 1) & (nm == 1)).astype(float).where(ae.notna(), other=float("nan"))
+        # account exists but name doesn't match → bot reusing someone's handle
+        final_df["coincidental_match"] = ((ae == 1) & (nm == 0)).astype(float).where(ae.notna(), other=float("nan"))
 
     final_df = final_df.drop(columns=["username"], errors="ignore")
 
