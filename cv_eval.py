@@ -20,8 +20,8 @@ SHOW_SHAP = True # set to true to see SHAP graph
 
 # penalties/rewards from the bot-or-not challenge
 REWARD_TP = 2   # catch a bot
-PENALTY_FP = -2 # accuse a human
-PENALTY_FN = -6 # miss a bot
+PENALTY_FP = -6 # accuse a human
+PENALTY_FN = -2 # miss a bot
 REWARD_TN = 0 # ignore human
 
 # to help find the best "cutoff" for identifying a human in the challenge
