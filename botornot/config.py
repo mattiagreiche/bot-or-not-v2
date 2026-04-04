@@ -15,22 +15,26 @@ USE_EMBEDDINGS = True
 
 # training data file lists (paths under DIR_RAW)
 TRAINING_POST_FILES = [
-    os.path.join(DIR_RAW, "dataset.posts&users.30.json"),
-    os.path.join(DIR_RAW, "dataset.posts&users.31.json"),
-    os.path.join(DIR_RAW, "dataset.posts&users.32.json"),
-    os.path.join(DIR_RAW, "dataset.posts&users.33.json"),
+    os.path.join(DIR_RAW, "dataset.posts&users.1.json"),
+    os.path.join(DIR_RAW, "dataset.posts&users.2.json"),
+    os.path.join(DIR_RAW, "dataset.posts&users.3.json"),
+    os.path.join(DIR_RAW, "dataset.posts&users.4.json"),
+    os.path.join(DIR_RAW, "dataset.posts&users.5.json"),
+    os.path.join(DIR_RAW, "dataset.posts&users.6.json"),
 ]
 TRAINING_BOT_FILES = [
-    os.path.join(DIR_RAW, "dataset.bots.30.txt"),
-    os.path.join(DIR_RAW, "dataset.bots.31.txt"),
-    os.path.join(DIR_RAW, "dataset.bots.32.txt"),
-    os.path.join(DIR_RAW, "dataset.bots.33.txt"),
+    os.path.join(DIR_RAW, "dataset.bots.1.txt"),
+    os.path.join(DIR_RAW, "dataset.bots.2.txt"),
+    os.path.join(DIR_RAW, "dataset.bots.3.txt"),
+    os.path.join(DIR_RAW, "dataset.bots.4.txt"),
+    os.path.join(DIR_RAW, "dataset.bots.5.txt"),
+    os.path.join(DIR_RAW, "dataset.bots.6.txt"),
 ]
 
 # inference data file list
 INFERENCE_POST_FILES = [
     #  os.path.join(DIR_RAW, "dataset.posts&users.34.json"), # english
-    os.path.join(DIR_RAW, "dataset.posts&users.35.json"), # french
+    # os.path.join(DIR_RAW, "dataset.posts&users.35.json"), # french
 ]
 
 # derived paths: training outputs
