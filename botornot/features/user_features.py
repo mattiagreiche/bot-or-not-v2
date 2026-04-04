@@ -3,8 +3,12 @@ import re
 import string
 import json
 import math
+import os
 import pandas as pd
 from botornot.features.embeddings import get_embeddings
+from botornot.config import DIR_RAW
+
+TWITTER_LOOKUP_PATH = os.path.join(DIR_RAW, "twitter_lookup.csv")
 
 # hi! this function extracts the features for use in the XGBoost model.
 # some features are easily extractable, and the others are embeddings from a sentence transformer model
@@ -148,7 +152,7 @@ def extract_features_from_users(users_list, use_embeddings=True):
     if not use_embeddings:
         # keep only useful features (no embeddings) + author_id
         keep_cols = [
-            "author_id",
+            "author_id", "username",
             "username_len", "username_digits", "username_entropy",
             "name_len", "name_nonalpha", "name_word_count", 
             "description_len", "description_has_url", "description_has_hashtag", 
@@ -166,7 +170,7 @@ def extract_features_from_users(users_list, use_embeddings=True):
     
     # keep only useful/numerical features (INCL. embeddings) + author_id
     keep_cols = [
-        "author_id", "z_score",
+        "author_id", "username", "z_score",
         "username_len", "username_digits", "username_entropy",
         "name_len", "name_nonalpha", "name_word_count", 
         "description_len", "description_has_url", "description_has_hashtag", 
@@ -213,6 +217,15 @@ def build_features_df(post_files, bot_files=None, use_embeddings=True):
         df = process_single_file(post_file, use_embeddings=use_embeddings)
         all_features.append(df)
     final_df = pd.concat(all_features, ignore_index=True)
+
+    if os.path.exists(TWITTER_LOOKUP_PATH):
+        print(f"Merging Twitter lookup features from {TWITTER_LOOKUP_PATH}...")
+        lookup_df = pd.read_csv(TWITTER_LOOKUP_PATH)
+        lookup_df = lookup_df.replace(-1, float("nan"))
+        final_df = pd.merge(final_df, lookup_df, on="username", how="left")
+
+    final_df = final_df.drop(columns=["username"], errors="ignore")
+
     if bot_files is not None:
         bot_ids = load_bot_labels(bot_files)
         final_df["is_bot"] = final_df["author_id"].isin(bot_ids).astype(int)
