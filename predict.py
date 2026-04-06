@@ -94,7 +94,7 @@ def predict_bot(new_data_df, predicted_bot_ids_path=None, borderline_path=None):
 
 if __name__ == "__main__":
     for json_file in INFERENCE_POST_FILES:
-        parquet_path, preds_path, _ = inference_paths(json_file)
+        parquet_path, preds_path = inference_paths(json_file)
         num = os.path.basename(json_file).split('.')[-2]
         borderline_path = os.path.join(DIR_INFERENCE, f"borderline_cases_{num}.csv")
 
