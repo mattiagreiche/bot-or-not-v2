@@ -4,7 +4,7 @@ from botornot.features import build_features_df
 
 if __name__ == "__main__":
     for json_file in INFERENCE_POST_FILES:
-        parquet_path, _, preview_path = inference_paths(json_file)
+        parquet_path, _, _ = inference_paths(json_file)
 
         os.makedirs(os.path.dirname(parquet_path), exist_ok=True)
 
@@ -13,8 +13,5 @@ if __name__ == "__main__":
 
         print(f"Saving {len(final_df)} rows to {parquet_path}")
         final_df.to_parquet(parquet_path, index=False)
-
-        final_df.head(10).to_csv(preview_path, index=False)
-        print(f"Saved preview to {preview_path}")
 
     print("\nDone.")
