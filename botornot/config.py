@@ -40,19 +40,16 @@ INFERENCE_POST_FILES = [
 # derived paths: training outputs
 if USE_EMBEDDINGS:
     TRAINING_PARQUET_PATH = os.path.join(DIR_TRAINING, "user_features.parquet")
-    TRAINING_PREVIEW_PATH = os.path.join(DIR_TRAINING, "user_features_preview.csv")
 else:
     TRAINING_PARQUET_PATH = os.path.join(DIR_TRAINING, "user_features_no_emb.parquet")
-    TRAINING_PREVIEW_PATH = os.path.join(DIR_TRAINING, "user_features_no_emb_preview.csv")
 
 def inference_paths(json_file):
-    """Return (parquet_path, predictions_path, preview_path) for a given inference JSON file."""
+    """Return (parquet_path, predictions_path) for a given inference JSON file."""
     num = os.path.basename(json_file).split('.')[-2]
     suffix = "" if USE_EMBEDDINGS else "_no_emb"
-    parquet  = os.path.join(DIR_INFERENCE, f"user_features_{num}{suffix}.parquet")
-    preds    = os.path.join(DIR_INFERENCE, f"predicted_bot_ids_{num}.txt")
-    preview  = os.path.join(DIR_INFERENCE, f"user_features_{num}{suffix}_preview.csv")
-    return parquet, preds, preview
+    parquet = os.path.join(DIR_INFERENCE, f"user_features_{num}{suffix}.parquet")
+    preds   = os.path.join(DIR_INFERENCE, f"predicted_bot_ids_{num}.txt")
+    return parquet, preds
 
 # model artifact
 ARTIFACT_PATH = os.path.join(DIR_MODELS, "bot_detector.pkl")
