@@ -4,17 +4,22 @@ Bot detection pipeline for the April McGill Bot-or-Not Challenge. Classifies Twi
 
 ## Features
 
-- **Semantic embeddings:** Tweets and bios embedded with `paraphrase-multilingual-MiniLM-L12-v2`. For tweets, both mean and std of embeddings across a user's posts are used; the std captures how much a user's content varies, which turns out to be a strong signal.
-- **Temporal rhythm:** Hour/day-of-week posting entropy and inter-post gap variation (`delta_s_cv`). Bots tend to post on suspiciously regular schedules.
-- **Vocabulary:** Type-token ratio, average word length, unique hashtag ratio.
-- **Profile features:** Usernames are cross-referenced against public profile data to check whether account metadata matches what's in the dataset: features like `description_partial_match` and `identity_score`.
-- **PCA:** Tweet and description embeddings compressed to 25 and 30 components to avoid overfitting to topic-specific content.
+- **Semantic embeddings:** Tweets and bios embedded with `paraphrase-multilingual-MiniLM-L12-v2`. For tweets, both mean and std of embeddings across a user's posts are used; the std captures semantic consistency, which differs significantly between bots and humans.
+- **Temporal rhythm:** Entropy of posting hours and day-of-week, plus inter-post gap variation (`delta_s_cv`). Humans and bots have detectably different posting patterns.
+- **Vocabulary:** Type-token ratio, average word length, unique hashtag ratio. Bots reuse the same words and hashtags far more than humans do.
+- **PCA:** Tweet and description embeddings compressed to 25 and 30 components to keep features topic-agnostic and avoid overfitting to specific domains in the training data.
 
 ## Model
 
 Stacking ensemble: XGBoost + LightGBM + CatBoost base learners, with a Logistic Regression meta-learner trained on out-of-fold predictions. XGBoost is run on 3 seeds and averaged to reduce variance. Hyperparameters tuned with Optuna directly on the challenge profit metric.
 
 Scoring is TP=+2, FP=−6, FN=−2, so `scale_pos_weight` is calibrated to ~1.8 (rather than the naive class imbalance ratio) to reflect that false positives are much more costly.
+
+## Setup
+
+```
+pip install -r requirements.txt
+```
 
 ## How to Run
 
@@ -23,7 +28,7 @@ Scoring is TP=+2, FP=−6, FN=−2, so `scale_pos_weight` is calibrated to ~1.8 
 
 2. **Evaluate / tune threshold**
    `python cv_eval.py`
-   5-fold CV with per-fold scores, SHAP importance across all three models, and a bot vs. human feature comparison.
+   5-fold CV with per-fold scores and SHAP importance across all three models. Saves beeswarm plots to `assets/`. Prints the recommended threshold at the end.
 
 3. **Tune hyperparameters** (optional)
    `python tune.py --model all --trials 50`
@@ -42,10 +47,6 @@ Scoring is TP=+2, FP=−6, FN=−2, so `scale_pos_weight` is calibrated to ~1.8 
 
 ## Config
 
-Everything in `botornot/config.py`:
+`botornot/config.py`:
 - `USE_EMBEDDINGS` — set to `False` to skip embeddings (faster, worse)
-- `INFERENCE_POST_FILES` — list of inference JSONs
-- `THRESHOLD` in `train_final.py` — update after running `cv_eval.py`
-
----
-*Built for the McGill Bot-or-Not Challenge.*
+- `TRAINING_POST_FILES` / `INFERENCE_POST_FILES` — input dataset file lists
